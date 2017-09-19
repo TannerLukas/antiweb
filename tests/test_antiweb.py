@@ -370,13 +370,6 @@ class Test_Antiweb_rst(unittest.TestCase):
         with patch.object(sys, 'argv', self.test_args):
             self.functional("", "ein_rst_docs.rst", compare_path_small_testfile, main())
 
-    def test_antiweb_rst_r(self):
-        compare_path_small_testfile = self.data_dir.get_path( "docs", "ein_rst.rst")
-        self.test_args = ['antiweb.py', "-r", self.temp_dir.get_path()]
-
-        with patch.object(sys, 'argv', self.test_args):
-            self.functional("", "ein_rst_docs.rst", compare_path_small_testfile, main())
-
     def tearDown(self):
         self.temp_dir.remove_tempdir()
 
@@ -459,6 +452,35 @@ class Test_Antiweb_Xml(unittest.TestCase):
 
         with patch.object(sys, 'argv', self.test_args):
             self.functional("", "test_xml.rst", compare_path, main())
+
+class Test_Antiweb_Clojure(unittest.TestCase):
+
+    def setUp(self):
+        self.doc_dir = "docs"
+        self.temp_dir = TempDir()
+        self.data_dir = DataDir("unittest_clojure")
+        self.origin_path = self.data_dir.get_path("test_clojure.clj")
+        self.destination_path = self.temp_dir.get_path("test_clojure.clj")
+
+        shutil.copyfile(self.origin_path, self.destination_path)
+
+    def compare(self, directory, filename, compare_path):
+        with open(self.temp_dir.get_path(directory, filename)) as output:
+            antiweb_output = output.readlines()
+        with open(compare_path) as compare:
+            antiweb_compare = compare.readlines()
+        self.assertEqual(antiweb_output, antiweb_compare)
+
+    def functional(self, directory, filename, compare_path, assert_input):
+        self.assertTrue(assert_input)
+        self.compare(directory, filename, compare_path)
+
+    def test_clojure(self):
+        compare_path = self.data_dir.get_path("test_clojure.rst")
+        self.test_args = ['antiweb.py', self.destination_path]
+
+        with patch.object(sys, 'argv', self.test_args):
+            self.functional("", "test_clojure.rst", compare_path, main())
 
 class Test_GenericReader(unittest.TestCase):
 
