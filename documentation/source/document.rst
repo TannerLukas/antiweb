@@ -39,7 +39,6 @@ Document
            <<Document.collect_blocks>>
            <<Document.get_compiled_block>>
            <<Document.compile_block>>
-       
    
    .. py:attribute:: errors
    
@@ -266,9 +265,7 @@ Document
           
           else:
               #parse the file
-              lexer = pm.get_lexer_for_filename(rpath)
-              single_comment_markers,  block_comment_markers = get_comment_markers(lexer.name)
-              reader = readers.get(lexer.name, Reader)(lexer, single_comment_markers,  block_comment_markers)
+              reader = get_reader_for_file(fpath)
           
               doc = Document(text, reader, rpath, self.tokens)
               doc.collect_blocks()

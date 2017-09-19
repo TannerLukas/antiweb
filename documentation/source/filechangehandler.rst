@@ -9,7 +9,6 @@ FileChangeHandler
    This handler is responsible for handling changed file events in antiweb's daemon mode.
 
    :param string directory: absolute path to the monitored source directory
-   :param tuple<string> extensions: contains all handled file extensions ("*.cs", "*.py", etc)
    :param options: antiweb commandline options
    :param created_files: a set which contains the absolute paths of all previously created documentation files
 
@@ -18,11 +17,10 @@ FileChangeHandler
 
     class FileChangeHandler(FileSystemEventHandler):
     
-        def __init__(self, directory, extensions, options, created_files):
+        def __init__(self, directory, options, created_files):
             self._directory = directory
             #antiweb commandline options
             self._options = options
-            self._handled_extensions = extensions
             self._event_counter = 0
             self._created_files = set()
             self._created_files.update(created_files)
@@ -56,7 +54,7 @@ FileChangeHandler
                 #the file has been moved so it is now located in event.dest_path
                 changed_file = event.dest_path
     
-            ignore_change = changed_file in self._created_files or not changed_file.endswith(self._handled_extensions) or \
+            ignore_change = changed_file in self._created_files or not is_file_supported(changed_file) or \
                       event.is_directory or event.event_type == "deleted"
     
             if not ignore_change:

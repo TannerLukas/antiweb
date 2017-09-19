@@ -8,19 +8,10 @@ __email__ = "antiweb@freelists.org"
 import os
 import operator
 import logging
-import pygments.lexers as pm
 
-from antiweb_lib.readers.config import readers, comments
 
 from antiweb_lib.readers.Line import Line
-
-from antiweb_lib.readers.Reader import Reader
-from antiweb_lib.readers.CReader import CReader
-from antiweb_lib.readers.CSharpReader import CSharpReader
-from antiweb_lib.readers.ClojureReader import ClojureReader
-from antiweb_lib.readers.GenericReader import GenericReader
-from antiweb_lib.readers.RstReader import RstReader
-from antiweb_lib.readers.PythonReader import PythonReader
+from antiweb_lib.readers.config import get_reader_for_file
 
 
 logger = logging.getLogger('antiweb')
@@ -266,9 +257,7 @@ class Document(object):
 
         else:
             #parse the file
-            lexer = pm.get_lexer_for_filename(rpath)
-            single_comment_markers,  block_comment_markers = get_comment_markers(lexer.name)
-            reader = readers.get(lexer.name, Reader)(lexer, single_comment_markers,  block_comment_markers)
+            reader = get_reader_for_file(fpath)
 
             doc = Document(text, reader, rpath, self.tokens)
             doc.collect_blocks()
@@ -389,26 +378,3 @@ class Document(object):
     #@edoc
     #@rinclude(find_next_directive)
     #@(Document.compile_block)
-
-#@cstart(get_comment_markers)
-
-def get_comment_markers(lexer_name):
-    #@start(get_comment_markers doc)
-    #From the map above the comment markers are retrieved via the following method:
-
-    """
-    ..  py:function:: get_comment_markers(lexer_name)
-
-        Retrieves the language specific comment markers from the comments map.
-        The comment markers of C serves as the default comment markers if the lexer name cannot be found.
-
-        :param string lexer_name: The name of the pygments lexer.
-        :return: The single and comment block markers defined by the language
-    """
-    #@indent 4
-    #@include(get_comment_markers)
-    #@(get_comment_markers doc)
-    comment_markers = comments.get(lexer_name, comments["C"])
-    single_comment_markers = comment_markers[0]
-    block_comment_markers = comment_markers[1]
-    return single_comment_markers,  block_comment_markers

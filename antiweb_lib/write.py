@@ -8,13 +8,10 @@ __email__ = "antiweb@freelists.org"
 import os
 import logging
 import sys
-import pygments.lexers as pm
 
-from antiweb_lib.readers.Reader import Reader
+from antiweb_lib.document import Document, WebError
 
-from antiweb_lib.document import Document, WebError, get_comment_markers
-
-from antiweb_lib.readers.config import readers
+from antiweb_lib.readers.config import get_reader_for_file
 
 logger = logging.getLogger('antiweb')
 
@@ -99,12 +96,7 @@ def generate(fname, tokens, show_warnings=False):
         logger.error("I/O error : " + e.strerror)
         return None
 
-    lexer = pm.get_lexer_for_filename(fname)
-    #get the language specific comment markers based on the pygments lexer name
-    single_comment_markers,  block_comment_markers = get_comment_markers(lexer.name)
-    #initialise a new Reader based on the pygments lexer name
-    reader = readers.get(lexer.name, Reader)(lexer, single_comment_markers, block_comment_markers)
-
+    reader = get_reader_for_file(fname)
     document = Document(text, reader, fname, tokens)
     return document.process(show_warnings, fname)
 #@(generate)

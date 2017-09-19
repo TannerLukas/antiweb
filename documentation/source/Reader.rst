@@ -691,7 +691,7 @@ ClojureReader
                            #remove comments but not chapters
                            l.text = l.indented(stext[1:])
        
-               yield l
+                   yield l
    
 GenericReader
 =============
@@ -874,31 +874,3 @@ XmlReader
                return text[:-len(self.block_comment_marker_end)]
        
    
-The Reader Dictionary
-=====================
-When writing a new reader, please register it in this dictionary with the according lexer name of the file. Please note that the Readername is the name of the class, not the file.
-
-Format:
-
-
-::
-
-     "lexername" : Readername,
-
-
-
-::
-
-    
-    readers = {
-        "C" : CReader,
-        "C++" : CReader,
-        "C#" : CSharpReader,
-        "Python" : PythonReader,
-        "Clojure" : ClojureReader,
-        "reStructuredText" : RstReader,
-        "XML" : XmlReader
-    }
-    
-
-

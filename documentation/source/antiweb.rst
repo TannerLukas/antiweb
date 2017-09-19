@@ -30,12 +30,7 @@ the following function:
                 logger.error("I/O error : " + e.strerror)
                 return None
         
-            lexer = pm.get_lexer_for_filename(fname)
-            #get the language specific comment markers based on the pygments lexer name
-            single_comment_markers,  block_comment_markers = get_comment_markers(lexer.name)
-            #initialise a new Reader based on the pygments lexer name
-            reader = readers.get(lexer.name, Reader)(lexer, single_comment_markers, block_comment_markers)
-        
+            reader = get_reader_for_file(fname)
             document = Document(text, reader, fname, tokens)
             return document.process(show_warnings, fname)
     
@@ -127,8 +122,7 @@ The program checks if a -r flag was given and if so, save the current directory 
             #The program aborts if the directory does not exist or if the path refers to a file.
             #A file is not allowed here because the -r option requires a directory.
             if not os.path.isdir(directory):
-                logger.error("directory not found: %s", directory)
-                sys.exit(1)
+                sys_exit("directory not found: %s" % directory)
     
             os.chdir(directory)
     
@@ -140,22 +134,18 @@ are retrieved. Only files with the allowed extensions are processed.
 ::
 
     
-            #Only files with the following extensions will be processed
-            rst_extension = ".rst"
-            ext_tuple = (".cs",".cpp",".py",".cc", rst_extension, ".xml")
-    
             handled_files = []
     
             for root, dirs, files in os.walk(directory, topdown=False):
                 for filename in files:
                     fname = os.path.join(root, filename)
     
-                    if not (os.path.isfile(fname) and fname.endswith(ext_tuple)):
+                    if not (os.path.isfile(fname) and is_file_supported(fname)):
                         continue
     
                     # rst files should be handled last as they might be a documentation file of a
                     # file that is not yet processed -> in this case the rst file will be ignored
-                    if fname.endswith(rst_extension):
+                    if fname.endswith(".rst"):
                         handled_files.append(fname)
                     else:
                         handled_files.insert(0, fname)
@@ -187,7 +177,7 @@ If the daemon option is used antiweb starts a daemon to monitor the source direc
                 try:
                     #observed directory => input directory
                     #recursive option is true in order to monitor all subdirectories
-                    observer.schedule(FileChangeHandler(directory, ext_tuple, options, created_files), path=directory, recursive=True)
+                    observer.schedule(FileChangeHandler(directory, options, created_files), path=directory, recursive=True)
     
                     print("\n------- starting daemon mode (exit with enter or ctrl+c) -------\n")
     
@@ -216,8 +206,10 @@ This else will take place when the -r flag is not given.
             #The program aborts if the file does not exist or if the path refers to a directory.
             #A directory is not allowed here because a directory can only be used with the -r option.
             if not os.path.isfile(absolute_file_path):
-                logger.error("file not found: %s", absolute_file_path)
-                sys.exit(1)
+                sys_exit("file not found: %s" % absolute_file_path)
+    
+            if not is_file_supported(absolute_file_path):
+                sys_exit("file is not supported: %s" % absolute_file_path)
     
             directory = os.path.split(absolute_file_path)[0]
     
@@ -252,6 +244,8 @@ This else will take place when the -r flag is not given.
     from watchdog.observers import Observer
     from antiweb_lib.filechangehandler import FileChangeHandler
     
+    from antiweb_lib.readers.config import is_file_supported
+    
 
 
 
@@ -262,9 +256,11 @@ This else will take place when the -r flag is not given.
 ::
 
     
-    __version__ = "0.9.1"
-    
     logger = logging.getLogger('antiweb')
+    
+    def sys_exit(message):
+        logger.error(message)
+        sys.exit(1)
     
 
 
@@ -303,7 +299,7 @@ This else will take place when the -r flag is not given.
         if not args:
             args.append(os.getcwd())
         # parsing() returns the selected options, arguments (the filepath/folderpath) and the parser
-        return (options, args, parser)
+        return options, args, parser
 
 
 ****************************************
@@ -329,57 +325,57 @@ Antiweb uses the python library *Watchdog* to monitor the source directory.
 
 Read the documentation of the corresponding event file handler (:ref:`FileChangeHandler <label-filechangehandler>`).
 
+.. _label-supported_languages:
+
+*******************
+Supported Languages
+*******************
+
+
+The following list contains all supported languages:
+
+
+::
+
+    supported_languages =[
+        Language("C", CReader, ["//"],(["/*","*/"])),
+        Language("C++", CReader, ["//"],(["/*","*/"])),
+        Language("C#", CSharpReader, ["//"],(["/*","*/"])),
+        Language("Python", PythonReader, ["#"],(["'''","'''"],["\"\"\"","\"\"\""])),
+        Language("Clojure", ClojureReader, [";"], []),
+        Language("reStructuredText", RstReader, [".. "],[]),
+        Language("XML", XmlReader, [], (["<!--","-->"]))
+    ]
+    
+    #sum(list, []) is used to flatten the list as the supported_files of a language are also lists
+    supported_files = sum([language.supported_files for language in supported_languages], [])
+
+
+
+.. _label-add_language:
 
 ************************
 How to add new languages
 ************************
 
-New languages are added by writing a new Reader class
-and registering it in the readers dictionary (see readers).
-A simple Reader example is provides by :py:class:`CReader`
-a more advanced reader is :py:class:`PythonReader`.
+New languages can be added by registering a new instance of the Language class
+to the supported_languages dictionary as shown in :ref:`Supported Languages <label-supported_languages>`.
+A language contains the corresponding pygments lexer, supported_files, reader, single comment characters
+and block comment characters (see :ref:`Language <label-language>`).
 
-Language specific comment markers
-====================================
-If a new language is added, its comment markers also have to be registered in the following map.
-The map contains the definition of all language specific comment markers.
-
-The comment markers of a language are defined in the format:
-``"language" : ([single_comment_tokens],[start_block_token, end_block_token])``
-
+The comment markers of a language have to be defined in the format:
+``[single_comment_tokens]`` and ``[start_block_token, end_block_token]``.
 Multiple single and block comment markers can be defined.
 
+If language dependent text processing has to be applied a new Reader class need to be introduced.
+A simple Reader example is :py:class:`CReader`, a more advanced Reader is :py:class:`PythonReader`.
 
-::
+Recommended steps when adding a new language:
 
-    comments = {
-    "C" : (["//"],(["/*","*/"])),
-    "C++" : (["//"],(["/*","*/"])),
-    "C#" : (["//"],(["/*","*/"])),
-    "Python" : (["#"],(["'''","'''"],["\"\"\"","\"\"\""])),
-    "reStructuredText" : ([".. "],[]),
-    "XML" : ([], (["<!--","-->"]))
-    }
+1) Go to `Available Lexers <http://pygments.org/docs/lexers/>` _ for more information about all available pygments lexers.
+2) Implement a new reader class if language specific text processing is needed.
+3) Add a new entry for the Language in supported_languages.
 
-From the map above the comment markers are retrieved via the following method:
-
-..  py:function:: get_comment_markers(lexer_name)
-
-    Retrieves the language specific comment markers from the comments map.
-    The comment markers of C serves as the default comment markers if the lexer name cannot be found.
-
-    :param string lexer_name: The name of the pygments lexer.
-    :return: The single and comment block markers defined by the language
-    
-    ::
-    
-        
-        def get_comment_markers(lexer_name):
-            comment_markers = comments.get(lexer_name, comments["C"])
-            single_comment_markers = comment_markers[0]
-            block_comment_markers = comment_markers[1]
-            return single_comment_markers,  block_comment_markers
-    
 
 *******
 Example

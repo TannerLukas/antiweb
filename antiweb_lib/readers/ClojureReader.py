@@ -50,6 +50,6 @@ class ClojureReader(Reader):
                     #remove comments but not chapters
                     l.text = l.indented(stext[1:])
 
-        yield l
+            yield l
     #@edoc
     #@(ClojureReader)

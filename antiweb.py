@@ -94,18 +94,21 @@ Antiweb uses the python library *Watchdog* to monitor the source directory.
 
 Read the documentation of the corresponding event file handler (:ref:`FileChangeHandler <label-filechangehandler>`).
 
+.. _label-supported_languages:
+
+*******************
+Supported Languages
+*******************
+
+#@include(supported_languages doc, antiweb_lib\readers\config.py)
+
+.. _label-add_language:
 
 ************************
 How to add new languages
 ************************
 
-New languages are added by writing a new Reader class
-and registering it in the readers dictionary (see readers).
-A simple Reader example is provides by :py:class:`CReader`
-a more advanced reader is :py:class:`PythonReader`.
-
-#@include(comments doc, antiweb_lib\readers\config.py)
-#@include(get_comment_markers doc, antiweb_lib\document.py)
+#@include(new_language doc, antiweb_lib\readers\config.py)
 
 *******
 Example
@@ -233,6 +236,8 @@ from antiweb_lib.write import write
 from watchdog.observers import Observer
 from antiweb_lib.filechangehandler import FileChangeHandler
 
+from antiweb_lib.readers.config import is_file_supported
+
 #@rstart(management)
 
 #<<management>>
@@ -240,9 +245,11 @@ from antiweb_lib.filechangehandler import FileChangeHandler
 
 #@code
 
-__version__ = "0.9.1"
-
 logger = logging.getLogger('antiweb')
+
+def sys_exit(message):
+    logger.error(message)
+    sys.exit(1)
 
 #@cstart(parsing)
 def parsing():
@@ -282,7 +289,7 @@ def parsing():
     if not args:
         args.append(os.getcwd())
     # parsing() returns the selected options, arguments (the filepath/folderpath) and the parser
-    return (options, args, parser)
+    return options, args, parser
 #@(parsing)
 
 def main():
@@ -323,8 +330,7 @@ def main():
         #The program aborts if the directory does not exist or if the path refers to a file.
         #A file is not allowed here because the -r option requires a directory.
         if not os.path.isdir(directory):
-            logger.error("directory not found: %s", directory)
-            sys.exit(1)
+            sys_exit("directory not found: %s" % directory)
 
         os.chdir(directory)
 
@@ -335,22 +341,18 @@ def main():
 
 #@code
 
-        #Only files with the following extensions will be processed
-        rst_extension = ".rst"
-        ext_tuple = (".cs",".cpp",".py",".cc", rst_extension, ".xml")
-
         handled_files = []
 
         for root, dirs, files in os.walk(directory, topdown=False):
             for filename in files:
                 fname = os.path.join(root, filename)
 
-                if not (os.path.isfile(fname) and fname.endswith(ext_tuple)):
+                if not (os.path.isfile(fname) and is_file_supported(fname)):
                     continue
 
                 # rst files should be handled last as they might be a documentation file of a
                 # file that is not yet processed -> in this case the rst file will be ignored
-                if fname.endswith(rst_extension):
+                if fname.endswith(".rst"):
                     handled_files.append(fname)
                 else:
                     handled_files.insert(0, fname)
@@ -381,7 +383,7 @@ def main():
             try:
                 #observed directory => input directory
                 #recursive option is true in order to monitor all subdirectories
-                observer.schedule(FileChangeHandler(directory, ext_tuple, options, created_files), path=directory, recursive=True)
+                observer.schedule(FileChangeHandler(directory, options, created_files), path=directory, recursive=True)
 
                 print("\n------- starting daemon mode (exit with enter or ctrl+c) -------\n")
 
@@ -409,8 +411,10 @@ def main():
         #The program aborts if the file does not exist or if the path refers to a directory.
         #A directory is not allowed here because a directory can only be used with the -r option.
         if not os.path.isfile(absolute_file_path):
-            logger.error("file not found: %s", absolute_file_path)
-            sys.exit(1)
+            sys_exit("file not found: %s" % absolute_file_path)
+
+        if not is_file_supported(absolute_file_path):
+            sys_exit("file is not supported: %s" % absolute_file_path)
 
         directory = os.path.split(absolute_file_path)[0]
 

@@ -12,3 +12,4 @@ Contents:
    document
    write
    filechangehandler
+   Language

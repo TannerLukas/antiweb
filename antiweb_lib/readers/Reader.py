@@ -28,7 +28,6 @@ source parsing.
 @include(GenericReader doc, GenericReader.py)
 @include(RstReader doc, RstReader.py)
 @include(XmlReader doc, XmlReader.py)
-@include(reader_dictionary doc, config.py)
 """
 #@rstart(readers)
 #.. _readers:
